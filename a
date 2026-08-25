@@ -1,0 +1,31 @@
+{
+  "name": "aesirmc-clone",
+  "version": "0.1.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.aesirmc.clone",
+    "productName": "Aesirmc Clone",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "modrinth.js",
+      "renderer/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": ["nsis", "zip", "portable"]
+    }
+  }
+}
