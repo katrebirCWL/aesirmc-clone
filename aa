@@ -1,0 +1,40 @@
+const { app, BrowserWindow, ipcMain } = require("electron");
+const path = require("path");
+const { searchMods, getCompatibleVersion, downloadMod } = require("./modrinth");
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 960,
+    height: 640,
+    transparent: true,
+    frame: false,
+    resizable: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js")
+    }
+  });
+
+  win.loadFile("renderer/index.html");
+}
+
+app.whenReady().then(createWindow);
+
+ipcMain.handle("modrinth:search", async (_, { query, mc, loader }) => {
+  return await searchMods(query, mc, loader);
+});
+
+ipcMain.handle("modrinth:install", async (_, { projectId, mc, loader, instancePath }) => {
+  const version = await getCompatibleVersion(projectId, mc, loader);
+  if (!version) return { ok: false, reason: "Uyumlu sürüm yok" };
+
+  const fs = require("fs");
+  const modsDir = path.join(instancePath, "mods");
+  fs.mkdirSync(modsDir, { recursive: true });
+
+  const dest = await downloadMod(version, modsDir);
+  return { ok: true, file: dest, name: version.name };
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
