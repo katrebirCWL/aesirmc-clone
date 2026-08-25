@@ -1,0 +1,113 @@
+const { contextBridge, shell } = require("electron");
+
+contextBridge.exposeInMainWorld("launcher", {
+  searchMods: (opts) => require("electron").ipcRenderer.invoke("modrinth:search", opts),
+  installMod: (opts) => require("electron").ipcRenderer.invoke("modrinth:install", opts),
+  openFolder: (path) => shell.openExternal("file:///" + path)
+});
+const https = require("https");
+const fs = require("fs");
+const path = require("path");
+
+const API = "https://api.modrinth.com/v2";
+
+function req(url) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(url, { headers: { "User-Agent": "aesirmc-clone/0.1" } }, res => {
+        let d = "";
+        res.on("data", c => d += c);
+        res.on("end", () => resolve(JSON.parse(d)));
+      })
+      .on("error", reject);
+  });
+}
+
+async function searchMods(query, mc, loader) {
+  const facets = encodeURIComponent(
+    JSON.stringify([
+      ["project_type:mod"],
+      [`game_versions:${mc}`],
+      [`categories:${loader}`]
+    ])
+  );
+  const url = `${API}/search?query=${encodeURIComponent(query)}&facets=${facets}&limit=20`;
+  const j = await req(url);
+  return j.hits;
+}
+
+async function getCompatibleVersion(projectId, mc, loader) {
+  const url = `${API}/project/${projectId}/version?game_versions=["${mc}"]&loaders=["${loader}"]`;
+  const versions = await req(url);
+  if (!versions.length) return null;
+  versions.sort((a, b) => new Date(b.date_published) - new Date(a.date_published));
+  return versions[0];
+}
+
+function downloadMod(version, modsPath) {
+  const file = version.files.find(f => f.primary) || version.files[0];
+  const dest = path.join(modsPath, file.filename);
+  return new Promise((resolve, reject) => {
+    https.get(file.url, res => {
+      const s = fs.createWriteStream(dest);
+      res.pipe(s);
+      s.on("finish", () => resolve(dest));
+    }).on("error", reject);
+  });
+}
+
+const https = require("https");
+const fs = require("fs");
+const path = require("path");
+
+const API = "https://api.modrinth.com/v2";
+
+function req(url) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(url, { headers: { "User-Agent": "aesirmc-clone/0.1" } }, res => {
+        let d = "";
+        res.on("data", c => d += c);
+        res.on("end", () => resolve(JSON.parse(d)));
+      })
+      .on("error", reject);
+  });
+}
+
+async function searchMods(query, mc, loader) {
+  const facets = encodeURIComponent(
+    JSON.stringify([
+      ["project_type:mod"],
+      [`game_versions:${mc}`],
+      [`categories:${loader}`]
+    ])
+  );
+  const url = `${API}/search?query=${encodeURIComponent(query)}&facets=${facets}&limit=20`;
+  const j = await req(url);
+  return j.hits;
+}
+
+async function getCompatibleVersion(projectId, mc, loader) {
+  const url = `${API}/project/${projectId}/version?game_versions=["${mc}"]&loaders=["${loader}"]`;
+  const versions = await req(url);
+  if (!versions.length) return null;
+  versions.sort((a, b) => new Date(b.date_published) - new Date(a.date_published));
+  return versions[0];
+}
+
+function downloadMod(version, modsPath) {
+  const file = version.files.find(f => f.primary) || version.files[0];
+  const dest = path.join(modsPath, file.filename);
+  return new Promise((resolve, reject) => {
+    https.get(file.url, res => {
+      const s = fs.createWriteStream(dest);
+      res.pipe(s);
+      s.on("finish", () => resolve(dest));
+    }).on("error", reject);
+  });
+}
+
+module.exports = { searchMods, getCompatibleVersion, downloadMod };
+
+
+module.exports = { searchMods, getCompatibleVersion, downloadMod };
